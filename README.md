@@ -1,6 +1,8 @@
 # octoprint-printer-connection-plugin-for-cura
 OctoPrint Printer Connection Plugin for Cura to allow direct printing from Cura to OctoPrint. In practice, this means that the Save icon will change to a WiFi looking icon, which when pressed will upload the gcode to your OctoPrint, and open a dialog, from which the Print button will actually start the print.
 
+At this point you need to manually enter the OctoPrint Api Key in the source code when you install - sub-optimal to say the least, but I have not had the time to get up to speed on Python GUI libraries. Ideally, when a OctoPrint instance is detected, a dialog would pop up (or maybe wait until actually trying to print) requesting the Api Key, which it would then store (after validation) into the Cura preferences for use next time. If anyone out there would like to contribute and/or give pointers on how one would do this, that would be much appreciated!
+
 Installation
 ============
 1. Create a new directory in your Cura installation's plugin directory, the name does not matter, but recommended is "OctoPrintPrinterConnection".
