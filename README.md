@@ -13,3 +13,8 @@ Dependencies
 * Cura with two pull requests
   * [Adding filename to the printer connection](https://github.com/daid/Cura/pull/1163)
   * [Adding printer connection plugins](https://github.com/daid/Cura/pull/1162)
+
+Credit
+======
+* Includes [ssdp library](https://gist.github.com/dankrause/6000248) writen by [Dan Krause](https://gist.github.com/dankrause), released using the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0)
+* Inspired by the PrinterConnection work in [Cura](https://github.com/daid/Cura) by [David Braam](https://github.com/daid)
