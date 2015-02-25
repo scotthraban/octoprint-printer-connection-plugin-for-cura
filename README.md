@@ -11,5 +11,5 @@ Dependencies
 ============
 * OctoPrint devel branch installation
 * Cura with two pull requests
-  * Adding filename to the printer connection
-  * Adding printer connection plugins
+  * [Adding filename to the printer connection](https://github.com/daid/Cura/pull/1163)
+  * [Adding printer connection plugins](https://github.com/daid/Cura/pull/1162)
