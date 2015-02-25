@@ -74,7 +74,7 @@ class OctoPrintPrinterConnection(printerConnectionBase.printerConnectionBase):
 
 
 	#Load the file into memory for printing.
-	def loadGCodeData(self, dataStream, filename):
+	def loadGCodeDataForFilename(self, dataStream, filename):
 		if self._printing:
 			return False
 
