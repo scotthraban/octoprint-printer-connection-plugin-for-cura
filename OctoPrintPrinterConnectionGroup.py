@@ -31,6 +31,8 @@ from Cura.util.printerConnection import printerConnectionBase
 from plugins.OctoPrintPrinterConnection.ssdp import discover
 from plugins.OctoPrintPrinterConnection.OctoPrintPrinterConnection import OctoPrintPrinterConnection
 from plugins.OctoPrintPrinterConnection.OctoPrintHttpClient import OctoPrintHttpClient
+from plugins.OctoPrintPrinterConnection.OctoPrintConfiguration import OctoPrintConfiguration
+from plugins.OctoPrintPrinterConnection.OctoPrintConfiguration import OctoPrintPrinter
 
 class OctoPrintPrinterConnectionGroup(printerConnectionBase.printerConnectionGroup):
 	"""
@@ -43,7 +45,12 @@ class OctoPrintPrinterConnectionGroup(printerConnectionBase.printerConnectionGro
 		self._connectionMap = {}
 		self._ignored = []
 		
-		self._thread = threading.Thread(target=self._octoprintThread)
+		self._config = OctoPrintConfiguration()
+		
+		for printer in self._config.getPrinters():
+			self._addPrinter(printer)
+
+		self._thread = threading.Thread(target = self._octoprintThread)
 		self._thread.daemon = True
 		self._thread.start()
 
@@ -59,47 +66,70 @@ class OctoPrintPrinterConnectionGroup(printerConnectionBase.printerConnectionGro
 	def getPriority(self):
 		return 100
 
+	def _addPrinter(self, printer):
+		self._connectionMap[printer.getKey()] = OctoPrintPrinterConnection(
+			printer.getKey(),
+			printer.getName(),
+			printer.getScheme(),
+			printer.getHost(),
+			printer.getPort(),
+			printer.getPath(),
+			printer.getApiKey(),
+			self)
+	
 	def _octoprintThread(self):
 		self._waitDelay = 0
 		
-		# self._connectionMap["hardcoded"] = OctoPrintPrinterConnection("hardcoded", "http", "192.168.8.8", 5000, "", "OctoPrint", self)
-		# return
-		
 		while True:
-			for ssdpResponse in discover("ssdp:all"):
-				try:
-					if ssdpResponse.usn not in self._ignored and ssdpResponse.usn not in self._connectionMap.keys():
-						scheme, host, port, path = self._parseLocation(ssdpResponse.location)
+			updated = self._config.updateConfigFromFile()
+			if updated:
+				for printer in self._config.getPrinters():
+					connection = self._connectionMap[printer.getKey()]
+					if not connection:
+						self._addPrinter(printer)
+					else:
+						connection.setApiKey(printer.getApiKey())
 
-						httpResponse = OctoPrintHttpClient(scheme, host, port, "", "xml").request("GET", path)
-						if not httpResponse.isOk() or httpResponse.body is None:
-							self._ignored.append(ssdpResponse.usn)
-							continue
+			if self._config.getDiscovery():
+				for ssdpResponse in discover("ssdp:all"):
+					try:
+						if ssdpResponse.usn not in self._ignored and ssdpResponse.usn not in self._connectionMap.keys():
+							scheme, host, port, path = self._parseLocation(ssdpResponse.location)
 
-						manufacturer = httpResponse.body.find("{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}manufacturer")
-						if manufacturer is not None:
-							manufacturer = manufacturer.text
-						presentationURL = httpResponse.body.find("{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}presentationURL")
-						if presentationURL is not None:
-							presentationURL = presentationURL.text
-						
-						if manufacturer and presentationURL and "octoprint" in manufacturer.lower():
-							scheme, host, port, path = self._parseLocation(presentationURL)
-							self._connectionMap[ssdpResponse.usn] = OctoPrintPrinterConnection(ssdpResponse.usn, scheme, host, port, path, "OctoPrint", self)
-						else:
-							self._ignored.append(ssdpResponse.usn)
+							httpResponse = OctoPrintHttpClient(scheme, host, port, "", "xml").request("GET", path)
+							if not httpResponse.isOk() or httpResponse.body is None:
+								self._ignored.append(ssdpResponse.usn)
+								continue
 
-						time.sleep(0.01)
-				except:
-					print "Response Error: ({}:{})".format(ssdpResponse.usn, ssdpResponse.location)
-					traceback.print_exc()
-					self._ignored.append(ssdpResponse.usn)
+							manufacturer = httpResponse.body.find("{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}manufacturer")
+							if manufacturer is not None:
+								manufacturer = manufacturer.text
+							presentationURL = httpResponse.body.find("{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}presentationURL")
+							if presentationURL is not None:
+								presentationURL = presentationURL.text
+							friendlyName = httpResponse.body.find("{urn:schemas-upnp-org:device-1-0}device/{urn:schemas-upnp-org:device-1-0}friendlyName")
+							if friendlyName is not None:
+								friendlyName = friendlyName.text
+							
+							if manufacturer and presentationURL and "octoprint" in manufacturer.lower():
+								scheme, host, port, path = self._parseLocation(presentationURL)
+								printer = OctoPrintPrinter(friendlyName, scheme, host, port, path, None, ssdpResponse.usn)
+								self._config.updatePrinter(printer)
+								self._addPrinter(printer)
+							else:
+								self._ignored.append(ssdpResponse.usn)
+
+							time.sleep(0.01)
+					except:
+						print "Response Error: ({}:{})".format(ssdpResponse.usn, ssdpResponse.location)
+						traceback.print_exc()
+						self._ignored.append(ssdpResponse.usn)
 
 
 			# Delay a bit more after every request. This so we do not stress the ssdp services too much
 			if self._waitDelay < 10:
 				self._waitDelay += 1
-			time.sleep(self._waitDelay * 60)
+			time.sleep(self._waitDelay * 30)
 
 			
 	def _parseLocation(self, location):
