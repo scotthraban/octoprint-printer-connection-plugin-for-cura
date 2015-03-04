@@ -37,7 +37,7 @@ class OctoPrintPrinterConnection(printerConnectionBase.printerConnectionBase):
 	Class to connect and print files with the OctoPrint
 	Auto-detects if the OctoPrint box is available and handles communication with the OctoPrint API
 	"""
-	def __init__(self, key, scheme, host, port, path, name, group):
+	def __init__(self, key, name, scheme, host, port, path, apiKey, group):
 		super(OctoPrintPrinterConnection, self).__init__(name)
 
 		print "{} Connection created: {}://{}:{}{}".format(name, scheme, host, port, path)
@@ -47,7 +47,8 @@ class OctoPrintPrinterConnection(printerConnectionBase.printerConnectionBase):
 		self._key = key
 
 		self._httpClient = OctoPrintHttpClient(scheme, host, port, path, "json")
-		self._httpClient.addHeader("X-Api-Key", "YOUR_API_KEY")
+		if apiKey:
+			self.setApiKey(apiKey)
 
 		self._isAvailable = False
 		self._printing = False
@@ -73,6 +74,9 @@ class OctoPrintPrinterConnection(printerConnectionBase.printerConnectionBase):
 		self.getApiKeyThread.start()
 
 
+	def setApiKey(self, apiKey):
+		self._httpClient.addHeader("X-Api-Key", apiKey)
+	
 	#Load the file into memory for printing.
 	def loadGCodeDataForFilename(self, dataStream, filename):
 		if self._printing:
